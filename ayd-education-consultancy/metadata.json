@@ -1,0 +1,6 @@
+{
+  "name": "AYD Education Consultancy",
+  "description": "AYD Education Consultancy - A modern platform for students and agents with AI consultancy chatbots, university matching, and full Google Workspace integrations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

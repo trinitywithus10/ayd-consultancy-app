@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Global Hardened Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true);
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function getUserRole(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.role;
+    }
+
+    function isAgent(userId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(userId)) && getUserRole(userId) == 'agent';
+    }
+
+    // --- Entity Validation Blueprints ---
+
+    function isValidUserProfile(data) {
+      return data.uid is string && data.uid.size() <= 128 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.displayName is string && data.displayName.size() <= 150 &&
+             data.role is string && (data.role == 'student' || data.role == 'agent') &&
+             data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    function isValidChecklist(data) {
+      return data.userId is string && data.userId.size() <= 128 &&
+             data.requirements is map;
+    }
+
+    function isValidEnquiry(data) {
+      return data.fullName is string && data.fullName.size() <= 150 &&
+             data.email is string && data.email.size() <= 200 &&
+             data.phone is string && data.phone.size() <= 30 &&
+             data.country is string && data.country.size() <= 100 &&
+             data.program is string && data.program.size() <= 150 &&
+             data.message is string && data.message.size() <= 2000 &&
+             data.status is string && (data.status == 'Pending' || data.status == 'Contacted' || data.status == 'Completed');
+    }
+
+    function isValidReferral(data) {
+      return data.studentName is string && data.studentName.size() <= 150 &&
+             data.studentEmail is string && data.studentEmail.size() <= 200 &&
+             data.program is string && data.program.size() <= 150 &&
+             data.country is string && data.country.size() <= 100 &&
+             data.status is string && (data.status == 'Pending' || data.status == 'Active' || data.status == 'Under Review' || data.status == 'Enrolled') &&
+             data.commissionAmount is number &&
+             data.agentId is string && data.agentId.size() <= 128 &&
+             data.createdAt is string && data.createdAt.size() <= 40;
+    }
+
+    // --- Path Specific Rules ---
+
+    // 1. Users Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAgent(request.auth.uid));
+      allow create: if isSignedIn() && isOwner(userId) && isValidUserProfile(incoming());
+      allow update: if isSignedIn() && isOwner(userId) && isValidUserProfile(incoming()) && incoming().role == existing().role;
+    }
+
+    // 2. Checklists Collection
+    match /checklists/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAgent(request.auth.uid));
+      allow create, update: if isSignedIn() && (isOwner(userId) || isAgent(request.auth.uid)) && isValidChecklist(incoming());
+    }
+
+    // 3. Enquiries Collection
+    match /enquiries/{enquiryId} {
+      allow create: if isValidEnquiry(incoming());
+      allow get, list: if isSignedIn() && (resource.data.email == request.auth.token.email || isAgent(request.auth.uid));
+    }
+
+    // 4. Referrals Collection
+    match /referrals/{referralId} {
+      allow get, list: if isSignedIn() && (resource.data.agentId == request.auth.uid || resource.data.studentEmail == request.auth.token.email);
+      allow create: if isSignedIn() && incoming().agentId == request.auth.uid && isValidReferral(incoming());
+      allow update: if isSignedIn() && (resource.data.agentId == request.auth.uid || isAgent(request.auth.uid)) && isValidReferral(incoming());
+    }
+
+  }
+}

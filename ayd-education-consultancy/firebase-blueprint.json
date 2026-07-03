@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile representing a student or agency agent",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "role": { "type": "string", "enum": ["student", "agent"] },
+        "agencyName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "displayName", "role", "createdAt"]
+    },
+    "DocumentRequirement": {
+      "title": "DocumentRequirement",
+      "description": "A single requirement in the document tracking checklist",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "description": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "label", "description", "completed", "updatedAt"]
+    },
+    "StudentChecklist": {
+      "title": "StudentChecklist",
+      "description": "Student's tracked requirements and completed statuses",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "requirements": { "type": "object" },
+        "lastSyncedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "requirements"]
+    },
+    "Enquiry": {
+      "title": "Enquiry",
+      "description": "An academic inquiry form submitted by a visitor",
+      "type": "object",
+      "properties": {
+        "fullName": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "country": { "type": "string" },
+        "program": { "type": "string" },
+        "message": { "type": "string" },
+        "submittedAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["Pending", "Contacted", "Completed"] }
+      },
+      "required": ["fullName", "email", "phone", "country", "program", "message", "submittedAt", "status"]
+    },
+    "Referral": {
+      "title": "Referral",
+      "description": "A student referred by an agency agent",
+      "type": "object",
+      "properties": {
+        "studentName": { "type": "string" },
+        "studentEmail": { "type": "string" },
+        "program": { "type": "string" },
+        "country": { "type": "string" },
+        "status": { "type": "string", "enum": ["Pending", "Active", "Under Review", "Enrolled"] },
+        "commissionAmount": { "type": "number" },
+        "agentId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["studentName", "studentEmail", "program", "country", "status", "commissionAmount", "agentId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Collection of registered user profiles"
+    },
+    "/checklists/{userId}": {
+      "schema": "StudentChecklist",
+      "description": "Collection of checklist tracking items per student"
+    },
+    "/enquiries/{enquiryId}": {
+      "schema": "Enquiry",
+      "description": "Collection of visitor consultation inquiries"
+    },
+    "/referrals/{referralId}": {
+      "schema": "Referral",
+      "description": "Collection of student referrals logged by agents"
+    }
+  }
+}
